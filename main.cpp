@@ -37,8 +37,8 @@ auto random_normal(const double& m, const double& s) {
 
 // auto target_function = [](const auto& x) { return static_cast<double>(x * x * x * sin(x)); };
 // auto target_function = [](const auto& x) { return static_cast<double>(2 * x * x); };
-// auto target_function = [](const auto& x) { return std::log(2 * x); };
-auto target_function = [](const auto& x) { return static_cast<double>(std::pow(x, 32)); };
+auto target_function = [](const auto& x) { return std::abs(x) < EPS ? 0 : std::log(2 * x); };
+// auto target_function = [](const auto& x) { return static_cast<double>(std::pow(x, 32)); };
 // auto target_function = [](const auto& x) { return std::sin(3 * x); };
 
 void show_function() {
@@ -46,9 +46,9 @@ void show_function() {
     std::vector<double> x(RANGE);
     std::vector<double> y(RANGE);
     for (int i = 0; i < RANGE; i++) {
-        x[i] = i / 10.0;
+        x[i] = i * STEP;
         auto result = target_function(x[i]);
-        y[i] = std::isnan(result) ? 0 : result;
+        y[i] = result;
     }
     plot(x, y);
     show();
@@ -81,6 +81,7 @@ public:
             auto result = target_function(i * STEP);
             if (!std::isinf(result) && !std::isnan(result)) {
                 s += std::abs(_dots[i] - result);
+                // s += (_dots[i] - result) * (_dots[i] - result);
             }
         }
         return s;
@@ -134,25 +135,15 @@ public:
     Species_TASK(const std::vector<double>& dots): Species(std::move(dots)) {}
 
     auto crossover(const Species_TASK& other) {
-        // auto u = random(0, 1)();
-        // std::vector<double> dd1;
-        // std::vector<double> dd2;
-        // for (int i = 0; i < 100; i++) {
-        //     auto y1i = u * (this->get_dots()[i]) + (1 - u) * other.get_dots()[i];
-        //     auto y2i = u * other.get_dots()[i] + (1 - u) * this->get_dots()[i];
-        //     dd1.push_back(y1i);
-        //     dd2.push_back(y2i);
-        // }
-        // Species_TASK d1(dd1);
-        // Species_TASK d2(dd2);
-        // return std::vector<Species_TASK>{d1, d2};
-        auto split_dot = static_cast<int>(random(0, RANGE)());
+        auto u = random(0, 1)();
         std::vector<double> dd1;
         std::vector<double> dd2;
-        dd1.insert(dd1.begin(), _dots.begin(), _dots.begin() + split_dot);
-        dd1.insert(dd1.begin() + split_dot, other._dots.begin() + split_dot, other._dots.end());
-        dd2.insert(dd2.begin(), other._dots.begin(), other._dots.begin() + split_dot);
-        dd2.insert(dd2.begin() + split_dot, _dots.begin() + split_dot, _dots.end());
+        for (int i = 0; i < 100; i++) {
+            auto y1i = u * (this->get_dots()[i]) + (1 - u) * other.get_dots()[i];
+            auto y2i = u * other.get_dots()[i] + (1 - u) * this->get_dots()[i];
+            dd1.push_back(y1i);
+            dd2.push_back(y2i);
+        }
         Species_TASK d1(dd1);
         Species_TASK d2(dd2);
         return std::vector<Species_TASK>{d1, d2};
@@ -273,7 +264,7 @@ public:
         int i = 0;
         while (i < GENERATION_AMOUNT) {
             __add_to_history(i);
-            if (i % 1000 == 0) printf("%i %f\n", i, _species[0].fitness());
+            if (i % 1000 == 0) printf("%i %e\n", i, _species[0].fitness());
             _breeding();
             _mutation();
             _new_population();
@@ -319,13 +310,13 @@ protected:
 };
 
 void init() {
-    E_SIZE = 10;
-    THRESHOLD = 0.005;
+    E_SIZE = 1000;
+    THRESHOLD = 0.5;
     MUTATE_GEN_PROB = 0.01;
     MUTATE_SPECIES_PROB = 1;
     GENERATION_AMOUNT = 1000000;
     POPULATION_SIZE = 20;
-    MINX = 0;
+    MINX = 0.1;
     MAXX = 10;
     STEP = 0.1;
     RANGE = range(MAXX, MINX, STEP);
